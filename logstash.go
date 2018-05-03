@@ -19,9 +19,9 @@ type Logstash struct {
 }
 
 // New generates a logstash sender from a host:port format
-func New(hostport string, timeout int) (ls *Logstash, err error) {
+func New(host string, timeout int) (ls *Logstash, err error) {
 
-	lshost, lsportstring, err := net.SplitHostPort(hostport)
+	lshost, lsportstring, err := net.SplitHostPort(host)
 	if err != nil {
 		return ls, errors.Wrap(err, "net-splithost")
 	}
