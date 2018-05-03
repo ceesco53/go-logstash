@@ -1,20 +1,43 @@
 package logstash
 
 import (
-	"net"
 	"fmt"
+	"net"
+	"strconv"
 	"time"
-	"errors"
+
+	"github.com/pkg/errors"
 )
 
+// Logstash is the basic struct
 type Logstash struct {
-	Hostname string
-	Port int
+	Hostname   string
+	Port       int
 	Connection *net.TCPConn
+	//Timeout in milliseconds
 	Timeout int
 }
 
-func New(hostname string, port int, timeout int) *Logstash {
+// New generates a logstash sender from a host:port format
+func New(hostport string, timeout int) (ls *Logstash, err error) {
+
+	lshost, lsportstring, err := net.SplitHostPort(hostport)
+	if err != nil {
+		return ls, errors.Wrap(err, "net-splithost")
+	}
+	lsport, err := strconv.Atoi(lsportstring)
+	if err != nil {
+		return ls, errors.Wrap(err, "logstash port isn't numeric")
+	}
+
+	// temporary at 3 minues.  Or I can build the connection after I get the first row back
+	ls = NewHostPort(lshost, lsport, 180000)
+
+	return ls, nil
+}
+
+// NewHostPort makes a logstash sender from a host name and port
+func NewHostPort(hostname string, port int, timeout int) *Logstash {
 	l := Logstash{}
 	l.Hostname = hostname
 	l.Port = port
@@ -23,6 +46,7 @@ func New(hostname string, port int, timeout int) *Logstash {
 	return &l
 }
 
+// Dump prints the contents of the Logstash structure
 func (l *Logstash) Dump() {
 	fmt.Println("Hostname:   ", l.Hostname)
 	fmt.Println("Port:       ", l.Port)
@@ -30,6 +54,7 @@ func (l *Logstash) Dump() {
 	fmt.Println("Timeout:    ", l.Timeout)
 }
 
+// SetTimeouts sets the timeout values
 func (l *Logstash) SetTimeouts() {
 	deadline := time.Now().Add(time.Duration(l.Timeout) * time.Millisecond)
 	l.Connection.SetDeadline(deadline)
@@ -37,6 +62,7 @@ func (l *Logstash) SetTimeouts() {
 	l.Connection.SetReadDeadline(deadline)
 }
 
+// Connect to the host
 func (l *Logstash) Connect() (*net.TCPConn, error) {
 	var connection *net.TCPConn
 	service := fmt.Sprintf("%s:%d", l.Hostname, l.Port)
@@ -59,8 +85,9 @@ func (l *Logstash) Connect() (*net.TCPConn, error) {
 	return connection, err
 }
 
-func (l *Logstash) Writeln(message string) (error) {
-	var err = errors.New("TCP Connection is nil.")
+// Writeln send a message to the host
+func (l *Logstash) Writeln(message string) error {
+	var err = errors.New("tcp connection is nil")
 	message = fmt.Sprintf("%s\n", message)
 	if l.Connection != nil {
 		_, err = l.Connection.Write([]byte(message))
