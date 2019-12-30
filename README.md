@@ -7,7 +7,7 @@ Example
 -------
 ```go
 import(
-	"github.com/heatxsink/go-logstash"
+	"github.com/ceesco53/go-logstash"
 	"fmt"
 )
 
